@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>JPA MEMO 6</title>
+    <link rel="stylesheet" href="./style.css">
+
+  </head>
+    
+  <body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+<div id="login-modal" class="hidden modal-overlay">
+    <div class="modal-content">
+        <h3>🔒 Pengesahan Admin</h3>
+        <p style="font-size: 0.75rem; color: #666; margin-bottom: 15px;">Akses Mod Admin untuk suntingan tanpa had.</p>
+        <input type="password" id="admin-password-input" placeholder="Masukkan Kata Laluan">
+        <div class="modal-buttons">
+            <button onclick="verifyAdmin()" class="btn-admin-modal">Login</button>
+            <button onclick="closeLogin()" class="btn-cancel">Batal</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>MEMO KITA</h2> 
+          <h2>JABATAN PENGAJIAN AM</h2> 
+            <p id="system-ref-label" class="ref-label-sub">[JABATAN PENGAJIAN AM]</p>
+        </div>
+        <button id="admin-btn" class="btn-toggle" onclick="adminLogin()">🔒 Mod Staf</button>
+    </div>
+
+    <div id="admin-settings-panel" class="panel admin-panel hidden">
+        <h3>⚙️ Tetapan Sistem (Admin)</h3>
+        <div class="form-grid-3">
+            <div><label>Prefix:</label><input type="text" id="pref-prefix"></div>
+            <div><label>Jilid:</label><input type="text" id="pref-jilid"></div>
+            <div><label>No. Seterusnya:</label><input type="number" id="pref-seq"></div>
+            <button onclick="updateSystemSettings()" class="btn-save-admin span-3">Simpan Tetapan & Reset Jujukan</button>
+        </div>
+    </div>
+
+    <div class="panel highlight">
+        <h3>📋 Jana Nombor Rujukan & Template</h3>
+        <div class="form-grid">
+            <input type="text" id="staff-name" placeholder="Nama Penuh Pemohon">
+            <input type="text" id="agenda-title" placeholder="Agenda / Tajuk Memo" class="span-2">
+            <button onclick="generateReference()" class="btn-generate span-3">🚀 JANA NOMBOR RUJUKAN</button>
+        </div>
+        
+        <div id="result-display" class="hidden result-card">
+            <p>Nombor Rujukan (Telah Disalin):</p>
+            <h2 id="new-ref-display">-</h2>
+            <button onclick="openSmartTemplate()" class="btn-google">📝 Buka Template Google Docs</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="table-header">
+            <h3>📊 Senarai Penjejak Memo</h3>
+            <div class="util-btns">
+                <button onclick="sendWhatsappReminder()" class="btn-wa">📱 WA Reminder</button>
+                <button id="admin-controls" onclick="downloadPDF()" class="btn-pdf hidden">📥 PDF</button>
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>No. Rujukan</th>
+                        <th>Nama Staf</th>
+                        <th>Agenda</th>
+                        <th>Status</th>
+                        <th>Tindakan</th>
+                    </tr>
+                </thead>
+                <tbody id="log-body">
+                   <tr><td colspan="5" style="text-align:center; padding:20px;">Menyambung ke pangkalan data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="credit">Created by Catherine Nguoi C. Lam (PIS) @ 2026</div>
+</div>
+    <script  src="./script.js"></script>
+
+  </body>
+  
+</html>
