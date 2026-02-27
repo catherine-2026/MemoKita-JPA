@@ -75,29 +75,37 @@ async function generateReference() {
     const agendaInput = document.getElementById('agenda-title');
     if (!nameInput.value || !agendaInput.value) return alert("Sila isi Nama dan Agenda.");
 
+    // Calculation logic for sequence
     const finalSequence = systemConfig.sequence + currentLogs.length + 1;
     lastRefGenerated = `${systemConfig.prefix}/${systemConfig.jilid} ( ${finalSequence} )`;
     
+    // Copy to clipboard and display the generated number
     navigator.clipboard.writeText(lastRefGenerated);
     document.getElementById('new-ref-display').innerText = lastRefGenerated;
     document.getElementById('result-display').classList.remove('hidden');
 
+    // Send data to Google Sheets
     await fetch(SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
-        body: JSON.stringify({ action: 'add', ref: lastRefGenerated, name: nameInput.value.toUpperCase(), agenda: agendaInput.value.toUpperCase() })
+        body: JSON.stringify({ 
+            action: 'add', 
+            ref: lastRefGenerated, 
+            name: nameInput.value.toUpperCase(), 
+            agenda: agendaInput.value.toUpperCase() 
+        })
     });
 
-    nameInput.value = ""; agendaInput.value = "";
-    setTimeout(refreshData, 1500);
+    // Reset inputs and refresh table to show the new entry immediately
+    nameInput.value = ""; 
+    agendaInput.value = "";
+    setTimeout(refreshData, 1000); 
 }
 
-// SUBMIT LINK WITHOUT ALERT
 async function submitLink(ref) {
     const url = prompt("Masukkan pautan Google Drive:");
     if (!url) return;
     
-    // UI Feedback: temporary loading text
     document.getElementById('log-body').innerHTML = "<tr><td colspan='5' style='text-align:center;'>Mengemaskini pautan...</td></tr>";
 
     await fetch(SCRIPT_URL, {
@@ -110,18 +118,11 @@ async function submitLink(ref) {
 }
 
 async function updateCell(ref, field, newValue) {
-    // Updates immediately on change without prompt
     await fetch(SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
         body: JSON.stringify({ action: 'editEntry', ref: ref, field: field, value: newValue.toUpperCase() })
     });
-}
-
-function openSmartTemplate() {
-    const templateID = "1CliH8U7xUWdz6crJcDKJAhdOQ7ExT4lQHcNeBqLzhmY";
-    const title = encodeURIComponent(`MEMO - ${lastRefGenerated}`);
-    window.open(`https://docs.google.com/document/d/${templateID}/copy?title=${title}`, '_blank');
 }
 
 async function deleteEntry(ref) {
