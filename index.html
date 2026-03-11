@@ -27,8 +27,8 @@
 <div class="container">
     <div class="header">
         <div>
-            <h1>MEMO KITA</h2> 
-          <h2>JABATAN PENGAJIAN AM</h2> 
+            <h1>MEMO KITA</h1> 
+            <h2>JABATAN PENGAJIAN AM</h2> 
             <p id="system-ref-label" class="ref-label-sub">[JABATAN PENGAJIAN AM]</p>
         </div>
         <button id="admin-btn" class="btn-toggle" onclick="adminLogin()">🔒 Mod Staf</button>
@@ -49,13 +49,12 @@
         <div class="form-grid">
             <input type="text" id="staff-name" placeholder="Nama Penuh Pemohon">
             <input type="text" id="agenda-title" placeholder="Agenda / Tajuk Memo" class="span-2">
-            <button onclick="generateReference()" class="btn-generate span-3">🚀 JANA NOMBOR RUJUKAN</button>
+            <button id="gen-btn" onclick="generateReference()" class="btn-generate span-3">🚀 JANA NOMBOR RUJUKAN</button>
         </div>
         
         <div id="result-display" class="hidden result-card">
             <p>Nombor Rujukan (Telah Disalin):</p>
             <h2 id="new-ref-display">-</h2>
-           
         </div>
     </div>
 
@@ -87,6 +86,204 @@
     
     <div class="credit">Created by Catherine Nguoi C. Lam (PIS) @ 2026</div>
 </div>
+
+<script>
+// --- CONFIGURATION ---
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzdSUwU_MXUMNsLYQvaLfPQUOpwmgDcGuIQthRBb7eQy-g_qtqryu52duFSp5xJvjO-Ww/exec";
+const ADMIN_PASS = "cath794613";
+
+let isAdmin = false;
+let currentLogs = [];
+let systemConfig = { prefix: "PIS/JPA/08/03/01", jilid: "Jld 12", sequence: 90 };
+
+window.onload = function() {
+    const saved = JSON.parse(localStorage.getItem('memo_config'));
+    if (saved) systemConfig = saved;
+    updateLabel();
+    refreshData();
+};
+
+function updateLabel() {
+    document.getElementById('system-ref-label').innerText = `${systemConfig.prefix}/${systemConfig.jilid}`;
+}
+
+// --- DATA FETCHING ---
+async function refreshData() {
+    try {
+        const response = await fetch(SCRIPT_URL);
+        const data = await response.json();
+        currentLogs = Array.isArray(data) ? data : [];
+        renderLogs([...currentLogs].reverse());
+    } catch (e) {
+        document.getElementById('log-body').innerHTML = "<tr><td colspan='5' style='text-align:center; color:red;'>Ralat sambungan Cloud.</td></tr>";
+    }
+}
+
+function renderLogs(logs) {
+    const tbody = document.getElementById('log-body');
+    if (!logs || logs.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Tiada rekod.</td></tr>";
+        return;
+    }
+
+    const now = new Date();
+    tbody.innerHTML = logs.map((log) => {
+        // PERMISSION LOGIC
+        // Admin gets total access. Staff gets 5 minutes.
+        let canEdit = isAdmin; 
+        if (!isAdmin && log.timestamp) {
+            const createdTime = new Date(log.timestamp);
+            const diffInMinutes = (now - createdTime) / 1000 / 60;
+            if (diffInMinutes <= 5 && log.status === 'Pending') canEdit = true;
+        }
+
+        const lockIcon = (!canEdit && log.status === 'Pending') ? " 🔒" : "";
+
+        return `
+        <tr>
+            <td><strong>${log.ref || ''}</strong>${lockIcon}</td>
+            <td>${canEdit ? `<input type="text" class="table-input" value="${log.name}" onchange="updateCell('${log.ref}', 'name', this.value)">` : (log.name || '')}</td>
+            <td>${canEdit ? `<input type="text" class="table-input" value="${log.agenda}" onchange="updateCell('${log.ref}', 'agenda', this.value)">` : (log.agenda || '')}</td>
+            <td><span class="status-pill ${(log.status || 'Pending').toLowerCase()}">${log.status || 'Pending'}</span></td>
+            <td>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    ${log.status === 'Pending' ? `<button class="btn-link" onclick="submitLink('${log.ref}')">Link</button>` : `<a href="${log.link}" target="_blank" style="text-decoration:none;">🔗</a>`}
+                    ${isAdmin ? `<button onclick="deleteEntry('${log.ref}')" style="background:none; border:none; color:red; cursor:pointer; font-size:1.1rem;">🗑️</button>` : ''}
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// --- ADMIN FEATURES ---
+function adminLogin() {
+    if (!isAdmin) {
+        document.getElementById('login-modal').classList.remove('hidden');
+        document.getElementById('admin-password-input').focus();
+    } else {
+        isAdmin = false;
+        document.getElementById('admin-btn').innerText = "🔒 Mod Staf";
+        document.getElementById('admin-settings-panel').classList.add('hidden');
+        document.getElementById('admin-controls').classList.add('hidden');
+        renderLogs([...currentLogs].reverse());
+    }
+}
+
+function verifyAdmin() {
+    const input = document.getElementById('admin-password-input');
+    if (input.value === ADMIN_PASS) {
+        isAdmin = true;
+        document.getElementById('admin-btn').innerText = "🔓 Mod Admin";
+        document.getElementById('admin-settings-panel').classList.remove('hidden');
+        document.getElementById('admin-controls').classList.remove('hidden');
+        
+        // Fill settings inputs
+        document.getElementById('pref-prefix').value = systemConfig.prefix;
+        document.getElementById('pref-jilid').value = systemConfig.jilid;
+        document.getElementById('pref-seq').value = systemConfig.sequence;
+        
+        closeLogin();
+        input.value = "";
+        renderLogs([...currentLogs].reverse()); // Re-render to show input boxes
+    } else {
+        alert("Kata laluan salah.");
+    }
+}
+
+function closeLogin() { document.getElementById('login-modal').classList.add('hidden'); }
+
+// --- SMART SEQUENCE & GENERATOR ---
+async function generateReference() {
+    const nameInput = document.getElementById('staff-name');
+    const agendaInput = document.getElementById('agenda-title');
+    const btn = document.getElementById('gen-btn');
+
+    if (!nameInput.value || !agendaInput.value) return alert("Sila isi maklumat.");
+    btn.disabled = true; btn.innerText = "Mencari Nombor Seterusnya...";
+
+    try {
+        const response = await fetch(SCRIPT_URL);
+        const data = await response.json();
+        
+        // Smart Scan: Find the actual highest number currently in the Cloud
+        let highestNo = systemConfig.sequence;
+        data.forEach(log => {
+            const match = log.ref.match(/\( (\d+) \)/);
+            if (match) {
+                const num = parseInt(match[1]);
+                if (num > highestNo) highestNo = num;
+            }
+        });
+
+        const nextNo = highestNo + 1;
+        const ref = `${systemConfig.prefix}/${systemConfig.jilid} ( ${nextNo} )`;
+        
+        navigator.clipboard.writeText(ref);
+        document.getElementById('new-ref-display').innerText = ref;
+        document.getElementById('result-display').classList.remove('hidden');
+
+        await fetch(SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify({ action: 'add', ref: ref, name: nameInput.value.toUpperCase(), agenda: agendaInput.value.toUpperCase() })
+        });
+
+        nameInput.value = ""; agendaInput.value = "";
+        setTimeout(refreshData, 2000);
+    } catch (e) { alert("Ralat Cloud. Cuba lagi."); }
+    finally { btn.disabled = false; btn.innerText = "🚀 JANA NOMBOR RUJUKAN"; }
+}
+
+// --- CLOUD UPDATES ---
+async function updateCell(ref, field, value) {
+    // Admin can edit any cell directly from the table
+    await fetch(SCRIPT_URL, { 
+        method: "POST", 
+        mode: "no-cors", 
+        body: JSON.stringify({ action: 'editEntry', ref: ref, field: field, value: value.toUpperCase() }) 
+    });
+}
+
+async function submitLink(ref) {
+    const url = prompt("Masukkan pautan Google Drive:");
+    if (!url) return;
+    await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: 'updateStatus', ref: ref, link: url }) });
+    setTimeout(refreshData, 1500);
+}
+
+async function deleteEntry(ref) {
+    if (!confirm("Padam rekod ini secara kekal?")) return;
+    await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: 'deleteEntry', ref: ref }) });
+    setTimeout(refreshData, 1000);
+}
+
+function updateSystemSettings() {
+    systemConfig.prefix = document.getElementById('pref-prefix').value;
+    systemConfig.jilid = document.getElementById('pref-jilid').value;
+    systemConfig.sequence = parseInt(document.getElementById('pref-seq').value);
+    localStorage.setItem('memo_config', JSON.stringify(systemConfig));
+    updateLabel();
+    alert("Tetapan disimpan! Jujukan akan bermula dari nombor ini jika tiada nombor lebih tinggi ditemui.");
+}
+
+// --- UTILITIES ---
+function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4');
+    doc.text("LAPORAN PENJEJAK MEMO JPA", 14, 15);
+    const data = currentLogs.map(l => [l.ref, l.name, l.agenda, l.status, l.link || '-']);
+    doc.autoTable({ head: [['Rujukan', 'Staf', 'Agenda', 'Status', 'Pautan']], body: data, startY: 20 });
+    doc.save("Laporan_Memo_JPA.pdf");
+}
+
+function sendWhatsappReminder() {
+    const pending = currentLogs.filter(l => l.status === 'Pending');
+    if (pending.length === 0) return alert("Tiada memo pending.");
+    let msg = "📢 *REMINDER MEMO PENDING*\n";
+    pending.forEach((l, i) => msg += `\n${i+1}. *${l.name}* - ${l.ref}`);
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+}
+</script>
     <script  src="./script.js"></script>
 
   </body>

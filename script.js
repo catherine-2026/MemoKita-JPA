@@ -70,36 +70,56 @@ function renderLogs(logs) {
     }).join('');
 }
 
+// FUNGSI DIKEMASKINI: Menjamin urutan nombor yang betul
 async function generateReference() {
     const nameInput = document.getElementById('staff-name');
     const agendaInput = document.getElementById('agenda-title');
+    const btn = document.querySelector('button[onclick="generateReference()"]');
+
     if (!nameInput.value || !agendaInput.value) return alert("Sila isi Nama dan Agenda.");
 
-    // Calculation logic for sequence
-    const finalSequence = systemConfig.sequence + currentLogs.length + 1;
-    lastRefGenerated = `${systemConfig.prefix}/${systemConfig.jilid} ( ${finalSequence} )`;
-    
-    // Copy to clipboard and display the generated number
-    navigator.clipboard.writeText(lastRefGenerated);
-    document.getElementById('new-ref-display').innerText = lastRefGenerated;
-    document.getElementById('result-display').classList.remove('hidden');
+    // Kunci butang sementara proses berlaku
+    btn.disabled = true;
+    btn.innerText = "Sila tunggu...";
 
-    // Send data to Google Sheets
-    await fetch(SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors",
-        body: JSON.stringify({ 
-            action: 'add', 
-            ref: lastRefGenerated, 
-            name: nameInput.value.toUpperCase(), 
-            agenda: agendaInput.value.toUpperCase() 
-        })
-    });
+    try {
+        // 1. Ambil data TERKINI dari server sebelum menjana nombor baru
+        const response = await fetch(SCRIPT_URL);
+        const latestData = await response.json();
+        currentLogs = Array.isArray(latestData) ? latestData : [];
 
-    // Reset inputs and refresh table to show the new entry immediately
-    nameInput.value = ""; 
-    agendaInput.value = "";
-    setTimeout(refreshData, 1000); 
+        // 2. Kira urutan berdasarkan data server yang paling baru
+        const finalSequence = systemConfig.sequence + currentLogs.length + 1;
+        lastRefGenerated = `${systemConfig.prefix}/${systemConfig.jilid} ( ${finalSequence} )`;
+        
+        // 3. Papar dan salin nombor
+        navigator.clipboard.writeText(lastRefGenerated);
+        document.getElementById('new-ref-display').innerText = lastRefGenerated;
+        document.getElementById('result-display').classList.remove('hidden');
+
+        // 4. Simpan ke Google Sheets
+        await fetch(SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify({ 
+                action: 'add', 
+                ref: lastRefGenerated, 
+                name: nameInput.value.toUpperCase(), 
+                agenda: agendaInput.value.toUpperCase() 
+            })
+        });
+
+        // 5. Bersihkan form dan refresh jadual
+        nameInput.value = ""; 
+        agendaInput.value = "";
+        setTimeout(refreshData, 1000);
+
+    } catch (e) {
+        alert("Ralat sambungan. Sila cuba lagi.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Generate Number";
+    }
 }
 
 async function submitLink(ref) {
