@@ -4,7 +4,22 @@
     --admin: #e67e22;
     --bg: #f4f7f6;
 }
+.btn-template {
+    background-color: #4285F4; /* Warna Biru Google */
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: background 0.3s;
+    width: 100%;
+}
 
+.btn-template:hover {
+    background-color: #3367D6;
+}
 body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; margin: 0; }
 .container { max-width: 950px; margin: auto; }
 .hidden { display: none !important; }
