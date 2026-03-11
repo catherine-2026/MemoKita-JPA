@@ -5,7 +5,18 @@
     <meta charset="UTF-8">
     <title>JPA MEMO 6</title>
     <link rel="stylesheet" href="./style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2c3e50">
+<link rel="apple-touch-icon" href="icon.png">
 
+<script>
+  // Register the Service Worker
+  if ('service-worker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js');
+    });
+  }
+</script>
   </head>
     
   <body>
