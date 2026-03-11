@@ -56,11 +56,23 @@ function renderLogs(logs) {
 
         return `
         <tr>
-            <td><strong>${log.ref || ''}</strong>${lockIcon}</td>
-            <td>${canEdit ? `<input type="text" value="${log.name}" onchange="updateCell('${log.ref}', 'name', this.value)">` : (log.name || '')}</td>
-            <td>${canEdit ? `<input type="text" value="${log.agenda}" onchange="updateCell('${log.ref}', 'agenda', this.value)">` : (log.agenda || '')}</td>
-            <td><span class="status-pill ${(log.status || 'Pending').toLowerCase()}">${log.status || 'Pending'}</span></td>
-            <td>
+            // Replace the previous <td> for Actions/Links with this logic:
+<td>
+    <div style="display:flex; gap:8px; align-items:center;">
+        ${log.status === 'Pending' ? 
+            `<button class="btn-link" onclick="submitLink('${log.ref}')">Link</button>` : 
+            (isAdmin ? 
+                `<a href="${log.link}" target="_blank" style="text-decoration:none;">🔗</a>` : 
+                `<span style="color:green; font-size:0.8rem;">✔️ Dokumen Sedia</span>`
+            )
+        }
+        
+        ${isAdmin ? 
+            `<button onclick="deleteEntry('${log.ref}')" style="background:none; border:none; color:red; cursor:pointer; font-size:1.1rem;">🗑️</button>` : 
+            ''
+        }
+    </div>
+</td>
                 <div style="display:flex; gap:8px; align-items:center;">
                     ${log.status === 'Pending' ? `<button onclick="submitLink('${log.ref}')" style="font-size:0.7rem;">Link</button>` : `<a href="${log.link}" target="_blank" style="text-decoration:none;">🔗</a>`}
                     ${isAdmin ? `<button onclick="deleteEntry('${log.ref}')" style="background:none; border:none; color:red; cursor:pointer;">🗑️</button>` : ''}
