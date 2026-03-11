@@ -1,6 +1,6 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzdSUwU_MXUMNsLYQvaLfPQUOpwmgDcGuIQthRBb7eQy-g_qtqryu52duFSp5xJvjO-Ww/exec";
 const ADMIN_PASS = "cath794613";
-const TEMPLATE_ID = "1ywg3x0rd047iGfC9A870MXZKG_hqS6FbIWQpNifxMRQ"; // ID Template anda
+const TEMPLATE_ID = "1ywg3x0rd047iGfC9A870MXZKG_hqS6FbIWQpNifxMRQ"; 
 
 let isAdmin = false;
 let currentLogs = [];
@@ -40,9 +40,7 @@ function renderLogs(logs) {
         tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Tiada rekod.</td></tr>";
         return;
     }
-
     const now = new Date();
-
     tbody.innerHTML = logs.map((log) => {
         let canStaffEdit = false;
         if (log.timestamp) {
@@ -50,7 +48,6 @@ function renderLogs(logs) {
             const diffInMinutes = (now - createdTime) / 1000 / 60;
             if (diffInMinutes <= 5) canStaffEdit = true;
         }
-
         const canEdit = isAdmin || (log.status === 'Pending' && canStaffEdit);
         const lockIcon = (!isAdmin && log.status === 'Pending' && !canStaffEdit) ? " 🔒" : "";
 
@@ -64,10 +61,7 @@ function renderLogs(logs) {
                 <div style="display:flex; gap:8px; align-items:center;">
                     ${log.status === 'Pending' ? 
                         `<button onclick="submitLink('${log.ref}')" style="font-size:0.7rem;">Link</button>` : 
-                        (isAdmin ? 
-                            `<a href="${log.link}" target="_blank" style="text-decoration:none;">🔗</a>` : 
-                            `<span style="color:green; font-size:0.8rem;">✔️ Sedia</span>`
-                        )
+                        (isAdmin ? `<a href="${log.link}" target="_blank" style="text-decoration:none;">🔗</a>` : `<span style="color:green; font-size:0.8rem;">✔️ Sedia</span>`)
                     }
                     ${isAdmin ? `<button onclick="deleteEntry('${log.ref}')" style="background:none; border:none; color:red; cursor:pointer; font-size:1.1rem;">🗑️</button>` : ''}
                 </div>
@@ -79,7 +73,7 @@ function renderLogs(logs) {
 async function generateReference() {
     const nameInput = document.getElementById('staff-name');
     const agendaInput = document.getElementById('agenda-title');
-    const btn = document.getElementById('gen-btn'); // Pastikan ID butang di HTML anda ialah "gen-btn"
+    const btn = document.getElementById('gen-btn');
 
     if (!nameInput.value || !agendaInput.value) return alert("Sila isi Nama dan Agenda.");
 
@@ -91,7 +85,6 @@ async function generateReference() {
         const latestData = await response.json();
         currentLogs = Array.isArray(latestData) ? latestData : [];
 
-        // Smart Sequence: Cari nombor tertinggi dalam rekod sedia ada
         let highestNo = systemConfig.sequence;
         currentLogs.forEach(log => {
             const match = log.ref.match(/\( (\d+) \)/);
@@ -99,3 +92,76 @@ async function generateReference() {
                 const num = parseInt(match[1]);
                 if (num > highestNo) highestNo = num;
             }
+        });
+
+        const nextNo = highestNo + 1;
+        lastRefGenerated = `${systemConfig.prefix}/${systemConfig.jilid} ( ${nextNo} )`;
+        
+        navigator.clipboard.writeText(lastRefGenerated);
+        document.getElementById('new-ref-display').innerText = lastRefGenerated;
+        document.getElementById('result-display').classList.remove('hidden');
+
+        await fetch(SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify({ action: 'add', ref: lastRefGenerated, name: nameInput.value.toUpperCase(), agenda: agendaInput.value.toUpperCase() })
+        });
+
+        nameInput.value = ""; 
+        agendaInput.value = "";
+        setTimeout(refreshData, 2000);
+
+    } catch (e) {
+        alert("Ralat sambungan.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "🚀 JANA NOMBOR RUJUKAN";
+    }
+}
+
+// FUNGSI PENTING: Untuk buka tab baru
+function openTemplate() {
+    if (!lastRefGenerated) {
+        alert("Sila jana nombor rujukan terlebih dahulu.");
+        return;
+    }
+    const url = `https://docs.google.com/document/d/${TEMPLATE_ID}/copy?title=${encodeURIComponent("MEMO - " + lastRefGenerated)}`;
+    
+    const win = window.open(url, '_blank');
+    if (!win) {
+        alert("Popup dihalang! Sila benarkan (Allow) popup untuk laman web ini di tetapan browser anda.");
+    }
+}
+
+async function submitLink(ref) {
+    const url = prompt("Masukkan pautan Google Drive:");
+    if (!url) return;
+    await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: 'updateStatus', ref: ref, link: url }) });
+    setTimeout(refreshData, 1500);
+}
+
+async function updateCell(ref, field, newValue) {
+    await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: 'editEntry', ref: ref, field: field, value: newValue.toUpperCase() }) });
+}
+
+async function deleteEntry(ref) {
+    if (!confirm("Padam?")) return;
+    await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: 'deleteEntry', ref: ref }) });
+    setTimeout(refreshData, 1500);
+}
+
+function adminLogin() {
+    if (!isAdmin) {
+        document.getElementById('login-modal').classList.remove('hidden');
+        document.getElementById('admin-password-input').focus();
+    } else {
+        isAdmin = false;
+        document.getElementById('admin-btn').innerText = "🔒 Mod Staf";
+        document.getElementById('admin-settings-panel').classList.add('hidden');
+        document.getElementById('admin-controls').classList.add('hidden');
+        refreshData(); 
+    }
+}
+
+function verifyAdmin() {
+    const
