@@ -119,30 +119,14 @@ async function generateReference() {
     }
 }
 
-// FUNGSI PENTING: Untuk buka tab baru
 function openTemplate() {
-    // 1. Check jika nombor rujukan sudah ada
     const ref = document.getElementById('new-ref-display').innerText;
-    
-    if (!ref || ref === "-") {
-        alert("Sila jana nombor rujukan terlebih dahulu!");
-        return;
-    }
+    if (!ref || ref === "-") return alert("Jana nombor dahulu!");
 
-    // 2. Bina URL
-    const templateURL = "https://docs.google.com/document/d/" + TEMPLATE_ID + "/copy";
-    const title = encodeURIComponent("MEMO - " + ref);
-    const finalURL = templateURL + "?title=" + title;
-
-    console.log("Membuka template untuk: " + ref);
-
-    // 3. Cuba buka tab baru
+    const finalURL = `https://docs.google.com/document/d/${TEMPLATE_ID}/copy?title=${encodeURIComponent("MEMO - " + ref)}`;
     const win = window.open(finalURL, '_blank');
-
-    // 4. Jika 'win' adalah null, maksudnya browser sekat
     if (!win) {
-        // Cara alternatif jika window.open gagal: Tukar lokasi tab sedia ada
-        if(confirm("Browser anda menyekat tab baru. Klik 'OK' untuk buka template di tab ini sahaja.")) {
+        if(confirm("Popup dihalang. Klik OK untuk buka di sini.")) {
             window.location.href = finalURL;
         }
     }
@@ -179,4 +163,4 @@ function adminLogin() {
 }
 
 function verifyAdmin() {
-    const
+    const input = document.getElementById('admin-password-input
